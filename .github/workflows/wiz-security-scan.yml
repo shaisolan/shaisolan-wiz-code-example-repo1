@@ -15,7 +15,7 @@ jobs:
     
     env:
       SCAN_PATH: "." # Scan the entire repository
-      POLICY: "Default IaC policy" # Use default Wiz IaC policy
+      POLICY: "Shai's VCS IaC policy" # Use Shai's IaC policy
       
     # Use bash shell for all steps
     defaults:
