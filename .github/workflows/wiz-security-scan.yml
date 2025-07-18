@@ -1,4 +1,4 @@
-name: "Wiz Security Scan"
+name: "Wiz Security Scan Test"
 
 # Trigger the workflow on pull requests and pushes to main branch
 on:
