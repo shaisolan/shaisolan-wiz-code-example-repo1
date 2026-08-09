@@ -1,0 +1,166 @@
+name: "Wiz Security Scan Test"
+
+# Trigger the workflow on pull requests and pushes to main branch
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  wiz-cli-iac-scan:
+    name: "Wiz CLI IaC Security Scan"
+    runs-on: ubuntu-latest
+    
+    env:
+      SCAN_PATH: "." # Scan the entire repository
+      POLICY: "Shai's VCS IaC policy" # Use Shai's IaC policy
+      
+    # Use bash shell for all steps
+    defaults:
+      run:
+        shell: bash
+    
+    steps:
+      # Step 1: Checkout the repository
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for better analysis
+      
+      # Step 2: Download Wiz CLI
+      - name: "Download Wiz CLI"
+        run: |
+          echo "Downloading Wiz CLI..."
+          curl -o wizcli https://downloads.wiz.io/wizcli/latest/wizcli-linux-amd64
+          chmod +x wizcli
+          echo "Wiz CLI downloaded successfully"
+          
+      # Step 3: Verify Wiz CLI installation
+      - name: "Verify Wiz CLI"
+        run: |
+          ./wizcli version
+          echo "Wiz CLI verification complete"
+      
+      # Step 4: Authenticate to Wiz
+      - name: "Authenticate to Wiz"
+        run: |
+          echo "Authenticating to Wiz..."
+          ./wizcli auth --id "$WIZ_CLIENT_ID" --secret "$WIZ_CLIENT_SECRET"
+          echo "Authentication complete"
+        env:
+          WIZ_CLIENT_ID: ${{ secrets.WIZ_CLIENT_ID }}
+          WIZ_CLIENT_SECRET: ${{ secrets.WIZ_CLIENT_SECRET }}
+      
+      # Step 5: List files to be scanned (for debugging)
+      - name: "List Terraform files"
+        run: |
+          echo "Terraform files in repository:"
+          find . -name "*.tf" -type f | head -20
+          echo ""
+          echo "All files in scan path:"
+          ls -la $SCAN_PATH
+      
+      # Step 6: Run Wiz CLI IaC scan
+      - name: "Run Wiz CLI IaC Scan"
+        run: |
+          echo "Starting Wiz CLI IaC security scan..."
+          ./wizcli iac scan --path "$SCAN_PATH" --policy "$POLICY"
+          echo "IaC scan completed"
+        continue-on-error: true # Continue even if vulnerabilities are found
+      
+      # Step 7: Run additional detailed scan with JSON output
+      - name: "Run detailed scan with JSON output"
+        run: |
+          echo "Running detailed scan with JSON output..."
+          ./wizcli iac scan --path "$SCAN_PATH" --policy "$POLICY" --format json > wiz-scan-results.json
+          echo "Detailed scan completed"
+        continue-on-error: true
+      
+      # Step 8: Upload scan results as artifacts
+      - name: "Upload scan results"
+        uses: actions/upload-artifact@v4
+        if: always() # Upload even if scan fails
+        with:
+          name: wiz-scan-results
+          path: |
+            wiz-scan-results.json
+            **/*.tf
+          retention-days: 30
+      
+      # Step 9: Display scan summary
+      - name: "Display scan summary"
+        if: always()
+        run: |
+          echo "=== WIZ SCAN SUMMARY ==="
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Scan path: $SCAN_PATH"
+          echo "Policy used: $POLICY"
+          echo ""
+          if [ -f "wiz-scan-results.json" ]; then
+            echo "Scan results file created: wiz-scan-results.json"
+            echo "File size: $(stat -c%s wiz-scan-results.json) bytes"
+          else
+            echo "No scan results file found"
+          fi
+          echo "========================="
+
+  # Optional: Add a job for container image scanning if you have Docker files
+  wiz-cli-image-scan:
+    name: "Wiz CLI Container Image Scan"
+    runs-on: ubuntu-latest
+    # Only run if Dockerfile exists
+    if: contains(github.event.head_commit.message, 'docker') || contains(github.event.head_commit.message, 'image')
+    
+    env:
+      SCAN_PATH: "."
+      TAG: "security-test:latest"
+      POLICY: "Default vulnerabilities policy"
+      
+    defaults:
+      run:
+        shell: bash
+    
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+      
+      - name: "Check for Dockerfile"
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "Dockerfile found, proceeding with image scan"
+          else
+            echo "No Dockerfile found, skipping image scan"
+            exit 0
+          fi
+      
+      - name: "Build Docker image"
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "Building Docker image..."
+            docker build . --tag $TAG
+            echo "Docker image built successfully"
+          fi
+      
+      - name: "Download Wiz CLI"
+        run: |
+          curl -o wizcli https://downloads.wiz.io/wizcli/latest/wizcli-linux-amd64
+          chmod +x wizcli
+      
+      - name: "Authenticate to Wiz"
+        run: ./wizcli auth --id "$WIZ_CLIENT_ID" --secret "$WIZ_CLIENT_SECRET"
+        env:
+          WIZ_CLIENT_ID: ${{ secrets.WIZ_CLIENT_ID }}
+          WIZ_CLIENT_SECRET: ${{ secrets.WIZ_CLIENT_SECRET }}
+      
+      - name: "Run Wiz CLI Docker image scan"
+        run: |
+          ./wizcli docker scan --image $TAG --policy "$POLICY"
+        continue-on-error: true
+      
+      - name: "Fetch digest for Graph enrichment"
+        run: |
+          ./wizcli docker tag --image $TAG

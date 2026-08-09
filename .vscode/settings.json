@@ -1,0 +1,23 @@
+{
+    "wiz.codePolicies.IAC Configuration": [
+        "Shai's VCS IaC policy"
+    ],
+    "wiz.codePolicies.secrets": [
+        "Shai's VCS secrets policy"
+    ],
+    "wiz.codePolicies.sensitiveData": [
+        "Shai's VCS sensitive data policy"
+    ],
+    "wiz.codePolicies.vulnerabilities": [
+        "Shai's VCS vulnerabilities policy"
+    ],
+    "wiz.buildPolicies.secrets": [
+        "Shai's VCS secrets policy"
+    ],
+    "wiz.buildPolicies.sensitiveData": [
+        "Shai's VCS sensitive data policy"
+    ],
+    "wiz.buildPolicies.vulnerabilities": [
+        "Shai's VCS vulnerabilities policy"
+    ]
+}

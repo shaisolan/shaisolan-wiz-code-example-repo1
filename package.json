@@ -1,0 +1,25 @@
+{
+  "name": "prime_car_dealer_app",
+  "version": "1.0.0",
+  "description": "Prime Car Dealer App",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "build": "gulp"
+  },
+  "dependencies": {
+    "consolidate": "^1.0.3",
+    "del": "^7.1.0",
+    "express": "4.20.0",
+    "gulp-clean-css": "^4.3.0",
+    "gulp-concat": "^2.6.1",
+    "gulp-html-replace": "^1.6.2",
+    "gulp-uglify": "^3.0.2",
+    "mockery": "2.1.0",
+    "mustache": "^4"
+  },
+  "devDependencies": {
+    "gulp": "^4.0.2",
+    "gulp-imagemin": "^7.1.0"
+  }
+}
