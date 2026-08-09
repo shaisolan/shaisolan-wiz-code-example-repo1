@@ -38,7 +38,7 @@ resource "aws_s3_bucket_public_access_block" "vulnerable_bucket_pab" {
   bucket = aws_s3_bucket.vulnerable_bucket.id
 
   # These should be true for security, but setting to false for testing
-  block_public_acls       = false
+  block_public_acls       = true
   block_public_policy     = false
   ignore_public_acls      = false
   restrict_public_buckets = false
